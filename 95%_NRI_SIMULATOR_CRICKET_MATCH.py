@@ -44,7 +44,8 @@ def team_up():
         "total_overs_bowled": 0, 
         "total_wickets_taken": 0, 
         "total_dot_balls_bowled": 0,
-        "total_economy": 0, 
+        "total_economy": 0,
+        "total_runs_conceded": 0,
         "total_performance_score":0
     }
 
@@ -53,7 +54,7 @@ def team_up():
 
     return user_team, gpt_team, user_players, gpt_players, user_stats, gpt_stats, user_bowlers, gpt_bowlers
 
-template_keys = "runs_scored", "balls_faced", "fours", "sixers", "boundaries", "balls_bowled", "overs_bowled", "wickets_taken", "dot_balls","economy", "performance_score"
+template_keys = "runs_scored", "balls_faced", "fours", "sixers", "boundaries", "balls_bowled", "overs_bowled", "wickets_taken", "dot_balls","economy", "runs_conceded", "performance_score"
 
 def toss(user_team, gpt_team, user_players, gpt_players, user_bowlers, gpt_bowlers, user_series, gpt_series):
     print(f"Toss time!! {user_team} vs {gpt_team}")
@@ -162,7 +163,7 @@ def innings(batting_team, bowling_team, batting_players, bowling_players,
                 bowling_match[bowler]["balls_bowled"] += 1
                 bowling_series[bowler]["total_balls_bowled"] += 1
                 bowling_match[bowler]["runs_conceded"] += runs
-
+                bowling_series[bowler]["total_runs_conceded"] += runs
                 if runs == 4:
                     batting_match[batting_players[striker_index]]["fours"] += 1
                     batting_series[batting_players[striker_index]]["total_fours"] += 1
@@ -311,12 +312,14 @@ def match_call(matches, user_team_series,gpt_team_series):
     best_player = None
     best_performance= -1
     for player, stats in all_players_match.items():
-        runs = stats.get("wickets_taken", 0)
-        wkts = stats.get("boundaries", 0)
+        runs = stats.get("runs_scored", 0)
+        wkts = stats.get("wickets_taken", 0)
+        fours = stats.get("fours", 0)
+        sixers = stats.get("sixers", 0)
         boundaries = stats.get("boundaries", 0)
         dot_balls = stats.get("Dotballs", 0)
         econ = stats.get("economy", 0)
-        performance = runs + (wkts*20) + (boundaries*1) + (dot_balls *3) + (econ*5 if 0 <econ < 12 else econ*1 if 12 <= econ < 17 else -1)
+        performance = runs + (wkts*20) + fours + (sixers*2) + (dot_balls *3) + (econ*5 if 0 <econ < 12 else econ*1 if 12 <= econ < 17 else -1)
         if performance > best_performance:
             best_performance = performance
             best_player = player
@@ -387,11 +390,11 @@ def series_call():
     ## FUll Scorecard
     ## 1 SC
     print(f"\n{batting_team} SERIES Team Scorecard: ")
-    print(f"{'Player':<18} {'Matches':<6} {'Runs':<5} {'Boundaries':<12} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':< 12} {'Wickets':<8} {'Dot Balls':< 10} {'Economy':< 7} {'Performance Score':< 15}")
+    print(f"{'Player':<16} {'Matches':<5} {'Runs':<5} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':<8} {'Wickets':<8} {'Dot Balls':<8} {'Economy':<7} {'Performance Score':<12}")
     for player in batting_players:
         if batting_series[player]["total_balls_faced"] >0 or batting_series[player]["total_balls_bowled"] >0:
             runs = batting_series[player]["total_runs_scored"]
-            balls_faced = batting_series[player]["tota_balls_faced"]
+            balls_faced = batting_series[player]["total_balls_faced"]
             fours = batting_series[player]["total_fours"]
             sixers = batting_seres[player]["total_sixers"]
             boundaries = fours + sixers
@@ -399,9 +402,15 @@ def series_call():
             wickets = batting_series[player]["total_wickets_taken"]
             runs_conceded = batting_series[player]["total_runs_conceded"]
             balls_bowled = batting_series[player]["total_balls_bowled"]
-            overs = (balls_bowled//6) + (balls_bowled %6*0.1)
-            economy = runs_conceded / balls_bowled* 6
-            if economy <12:
+            overs = (balls_bowled//6) + (balls_bowled %6*0.1) 
+            if balls_bowled > 0:
+                economy = runs_conceded / balls_bowled* 6 
+            else:
+                economy = 0
+            batting_series[player]["total_economy"] = economy
+            if economy== 0:
+                ec = 0
+            elif 0<economy <12:
                 ec = 5
             elif 12 <= economy < 17:
                 ec = 3
@@ -411,26 +420,31 @@ def series_call():
                 ec = -3
             outs = batting_series[player]["total_outs"]
             matches_played = batting_series[player]["total_matches_played"]
-            sr = (runs/ balls*100)
-            if sr<= 100:
+            if balls_faced >0:
+                sr = (runs/ balls_faced*100)
+            else:
+                sr = 0
+            if sr == 0:
+                sr_ps = 0
+            if 0< sr<= 100:
                 sr_ps = -1
             elif 100< sr <= 170:
-                sr_pr = 2
+                sr_ps = 2
             elif 170< sr <= 250:
-                sr_pr = 3
+                sr_ps = 3
             else:
-                sr_pr = 5
-            performance_score = runs + (fours*1) +(sixers*2) + (dot_balls * 2) + (wickets * 20)  -(outs *5 ) +  ec + sr_pr
-
-            print(f"{player:<18} {matches_played:<6} {runs:<5} {boundaries:<12} {fours:< 5} {sixers:< 6} {overs:< 12.2f} {wickets:<8} {dot_balls:<10} {economy:<7} {performance_score:<15}")
+                sr_ps = 5
+            performance_score = runs + fours +(sixers*2) + (dot_balls * 2) + (wickets * 20)  -(outs *5 ) +  ec + sr_ps
+            batting_series[player]["total_performance_score"] = performance_score
+            print(f"{player:<16} {matches_played:<5} {runs:<5} {fours:<5} {sixers:<6} {overs:<8.2f} {wickets:<8} {dot_balls:<8} {economy:<7} {performance_score:<12}")
     alle = input("Press 'ENTER' to get other team SERIES SCORECARD: ")
     # 2 SC
     print(f"\n{bowing_team} SERIES Team Scorecard: ")
-    print(f"{'Player':<18} {'Matches':<6} {'Runs':<5} {'Boundaries':<12} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':< 12} {'Wickets':<8} {'Dot Balls':< 10} {'Economy':< 7} {'Performance Score':< 15}")
+    print(f"{'Player':<16} {'Matches':<5} {'Runs':<5} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':<8} {'Wickets':<8} {'Dot Balls':<8} {'Economy':<7} {'Performance Score':<12}")
     for player in bowling_players:
         if bowling_series[player]["total_balls_faced"] >0 or bowling_series[player]["total_balls_bowled"] >0:
             runs = bowling_series[player]["total_runs_scored"]
-            balls_faced = bowling_series[player]["tota_balls_faced"]
+            balls_faced = bowling_series[player]["total_balls_faced"]
             fours = bowling_series[player]["total_fours"]
             sixers = bowling_seres[player]["total_sixers"]
             boundaries = fours + sixers
@@ -439,8 +453,14 @@ def series_call():
             runs_conceded = bowling_series[player]["total_runs_conceded"]
             balls_bowled = bowling_series[player]["total_balls_bowled"]
             overs = (balls_bowled//6) + (balls_bowled %6*0.1)
-            economy = runs_conceded / balls_bowled* 6
-            if economy <12:
+            if balls_bowled >0:
+                economy = runs_conceded / balls_bowled* 6
+            else:
+                economy = 0
+            bowling_series[player]["total_economy"] = economy
+            if economy == 0:
+                ec = 0
+            elif 0< economy <12:
                 ec = 5
             elif 12 <= economy < 17:
                 ec = 3
@@ -450,22 +470,38 @@ def series_call():
                 ec = -3
             outs = bowling_series[player]["total_outs"]
             matches_played = bowling_series[player]["total_matches_played"]
-            sr = (runs/ balls*100)
-            if sr<= 100:
+            if balls_faced >0:
+                sr = (runs/ balls_faced*100)
+            else:
+                sr = 0
+            if sr == 0:
+                sr_ps  = 0
+            if 0< sr<= 100:
                 sr_ps = -1
             elif 100< sr <= 170:
-                sr_pr = 2
+                sr_ps = 2
             elif 170< sr <= 250:
-                sr_pr = 3
+                sr_ps = 3
             else:
                 sr_pr = 5
-            performance_score = runs + (fours*1) +(sixers*2) + (dot_balls * 2) + (wickets * 20)  -(outs *5 ) +  ec + sr_pr
-
-            print(f"{player:<18} {matches_played:<6} {runs:<5} {boundaries:<12} {fours:< 5} {sixers:< 6} {overs:< 12.2f} {wickets:<8} {dot_balls:<10} {economy:<7} {performance_score:<15}")
+            performance_score = runs + fours*1 +(sixers*2) + (dot_balls * 2) + (wickets * 20)  -(outs *5 ) +  ec + sr_ps
+            bowling_series[player]["total_performance_score"] = performance_score
+            print(f"{player:<16} {matches:<5} {runs:<5} {fours:<5} {sixers:<6} {overs:<8.2f} {wickets:<8} {dot_balls:<8} {economy:<7} {performance_score:<12}")
 
 
     print("Series Summary Here!!!")
-
+    alle = input("Press 'ENTER' to get 'Player Of The Series: '")
+    best_player = None
+    best_series_performance = -1 
+    ##??
+    all_players_series= {}
+    all_players_series.update(batting_series)
+    all_players_series.update(bowling_series)
+    for player, stats in all_players_series.items():
+        if all_players_series[player]["total_performance_score"] > best_series_performance:
+            best_player = player
+            best_series_performance = all_players_series[player]["total_performance_score"]
+    print(f"{best_player} is the 'Player Of the Series' with the performance score of {best_series_performance}")
     winner = user_team if user_team_series > gpt_team_series else gpt_team if gpt_team_series > user_team_series else "Draw"
     return winner
 
@@ -473,5 +509,6 @@ winner_of_the_series = series_call()
 time.sleep(3)
 print(f"{winner_of_the_series} won the series!!! CONGRATULATIONS TO {winner_of_the_series}")
 
-## space unavailable at 390 except this all of 
-## set player f the series
+# COMPLETE SERIES PLAYERS SCORECARDS IS NOT ADDING UP
+## LIMIT CRECARD ECONOMY VALUE TO 2-3 DIGITS
+## set player of the series not working typeerror here
