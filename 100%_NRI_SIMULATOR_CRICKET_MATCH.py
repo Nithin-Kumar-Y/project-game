@@ -3,7 +3,7 @@ import time
 
 print("Welcome to NRI Cricket Simulator")
 
-overs = 2
+overs = int(input("Enter how many over match you want? "))
 
 def team_up():
     print("You VS GPT-team cricket")
@@ -97,20 +97,29 @@ def toss(user_team, gpt_team, user_players, gpt_players, user_bowlers, gpt_bowle
 def innings(batting_team, bowling_team, batting_players, bowling_players,
             batting_match, bowling_match, bowling_bowlers,
             batting_series, bowling_series, chasing=False, target=None):
+    print(f"\n {batting_team} innings starts now!\n")
+    print(f"{bowling_team} has taken the field")
     score = 0
     wickets = 0
     striker_index = 0
     non_striker_index = 1
     bowler_index = 0
-
+    alle = input("Press 'ENTER' to START the match: ")
     print(f"\n{batting_team} batting lineup: {', '.join(batting_players)}")
     time.sleep(1)
     S = batting_players[striker_index]
     NS = batting_players[non_striker_index]
     print(f"Striker: {S} \nNon Striker: {NS}")
-    batting_series[batting_players[striker_index]]["total_matches_played"] += 1
-    batting_series[batting_players[non_striker_index]]["total_matches_played"] +=1
-    alle = input("Press 'ENTER' to START the match: ")
+    
+    # track which bowlers have already been credited with a match appearance
+    # so we don't increment their "total_matches_played" for every over they bowl
+    _players_credited_for_match = set()
+    for p in [S,NS]:
+        if p not in _players_credited_for_match:
+            batting_series[p]['total_matches_played'] += 1
+            _players_credited_for_match.add(p)
+    
+    
 
     for over in range(overs):
         if chasing and target is not None and score > target:
@@ -121,7 +130,10 @@ def innings(batting_team, bowling_team, batting_players, bowling_players,
         bowler_index += 1
         print(f"\nOver {over + 1}: {bowler} to bowl")
         Over_runs = []
-        bowling_series[bowler]["total_matches_played"] += 1
+        # credit each bowler only once per innings/match
+        if bowler not in _players_credited_for_match:
+            bowling_series[bowler]["total_matches_played"] += 1
+            _players_credited_for_match.add(bowler)
         for ball in range(1, 7):
             runs = random.choices([0, 1, 2, 3, 4, 6, 'W'],
                                   weights=[10, 15, 15, 5, 20, 10, 10])[0]
@@ -148,7 +160,9 @@ def innings(batting_team, bowling_team, batting_players, bowling_players,
                 if next_index < len(batting_players):
                     striker_index = next_index
                     print(f"\tNext player: {batting_players[striker_index]}")
-                    batting_series[batting_players[striker_index]]['total_matches_played'] +=1
+                    if batting_players[striker_index] not in _players_credited_for_match:
+                        batting_series[batting_players[striker_index]]['total_matches_played'] +=1
+                        _players_credited_for_match.add(batting_players[striker_index])
                 else:
                     print("No players left.")
                     return score, wickets
@@ -211,7 +225,7 @@ def innings(batting_team, bowling_team, batting_players, bowling_players,
 ## SCORECARD
 def batting_first_scorecard(batting_team, batting_players, batting_match, score1, wickets1):
     print(f"\n{batting_team} Batting Scorecard:\t\t{score1}/{wickets1}")
-    print(f"{'Player':<20} {'Runs':<5} {'Balls':<5} {'4s':<8} {'6s':<8} {'SR':<6}")
+    print(f"{'Player':<22} {'Runs':<5} {'Balls':<5} {'4s':<8} {'6s':<8} {'SR':<6}")
     for player in batting_players:
         if batting_match[player]["balls_faced"] >0:
             runs = batting_match[player]["runs_scored"]
@@ -220,11 +234,11 @@ def batting_first_scorecard(batting_team, batting_players, batting_match, score1
             sixers = batting_match[player]["sixers"]
             sr = (runs/ balls *100) if balls >0 else 0
             ## batting_match[player]["total_matches_played"] +=1
-            print(f"{player:<20} {runs:<5} {balls:<5} {fours:<8} {sixers:<8} {sr:<6.2f}")
+            print(f"{player:<22} {runs:<5} {balls:<5} {fours:<8} {sixers:<8} {sr:<6.2f}")
         
 def bowling_first_scorecard(bowling_team, bowling_players, bowling_match, score1, wickets1):
     print(f"\n{bowling_team} Bowling Scorecard:\t\t{score1}/{wickets1}")
-    print(f"{'Player':<20} {'Overs':<5} {'Dot Balls':<8} {'Runs conceded':<15} {'Wkts':<10} {'Econ':<6}")     
+    print(f"{'Player':<22} {'Overs':<5} {'Dot Balls':<8} {'Runs conceded':<15} {'Wkts':<10} {'Econ':<6}")     
     for player in bowling_players:
         if bowling_match[player]["balls_bowled"] >0:
             balls_bowled = bowling_match[player]["balls_bowled"]
@@ -235,11 +249,11 @@ def bowling_first_scorecard(bowling_team, bowling_players, bowling_match, score1
             wickets_taken = bowling_match[player]["wickets_taken"]
             econ = (runs_conceded / (balls_bowled/ 6))
             ## bowling_series[player]["total_matches_played"] +=1
-            print(f"{player:<20} {overs:<5} {dot_balls:<8} {runs_conceded:<15} {wickets_taken:<10} {econ:<6.2f}")
+            print(f"{player:<22} {overs:<5} {dot_balls:<8} {runs_conceded:<15} {wickets_taken:<10} {econ:<6.2f}")
         
 def batting_second_scorecard(batting_team, batting_players, batting_match, score2, wickets2):
     print(f"\n{batting_team} Batting Scorecard:\t\t{score2}/{wickets2}")
-    print(f"{'Player':<20} {'Runs':<5} {'Balls':<5} {'4s':<8} {'6s':<8} {'SR':<6}")
+    print(f"{'Player':<22} {'Runs':<5} {'Balls':<5} {'4s':<8} {'6s':<8} {'SR':<6}")
     for player in batting_players:
         if batting_match[player]["balls_faced"] >0:
             runs = batting_match[player]["runs_scored"]
@@ -247,11 +261,11 @@ def batting_second_scorecard(batting_team, batting_players, batting_match, score
             fours = batting_match[player]["fours"]
             sixers = batting_match[player]["sixers"]
             sr = (runs / balls * 100) if balls > 0 else 0
-            print(f"{player:<20} {runs:<5} {balls:<5} {fours:<8} {sixers:<8} {sr:<6.2f}")
+            print(f"{player:<22} {runs:<5} {balls:<5} {fours:<8} {sixers:<8} {sr:<6.2f}")
         
 def bowling_second_scorecard(bowling_team, bowling_players, bowling_match, score2, wickets2):
     print(f"\n{bowling_team} Bowling Scorecard:\t\t{score2}/{wickets2}")
-    print(f"{'Player':<20} {'Overs':<5} {'Dot Balls':<8} {'Runs':<15} {'Wkts':<10} {'Econ':<6}")
+    print(f"{'Player':<22} {'Overs':<5} {'Dot Balls':<8} {'Runs':<15} {'Wkts':<10} {'Econ':<6}")
     for player in bowling_players:
         if bowling_match[player]["balls_bowled"] >0:
             balls_bowled = bowling_match[player]["balls_bowled"]
@@ -261,13 +275,12 @@ def bowling_second_scorecard(bowling_team, bowling_players, bowling_match, score
             runs_conceded = bowling_match[player]["runs_conceded"]
             wickets_taken = bowling_match[player]["wickets_taken"]
             econ = (runs_conceded / (balls_bowled / 6)) if balls_bowled > 0 else 0
-            print(f"{player:<20} {overs:<5} {dot_balls:<8}{runs_conceded:<15} {wickets_taken:<10} {econ:<6.2f}")
+            print(f"{player:<22} {overs:<5} {dot_balls:<8}{runs_conceded:<15} {wickets_taken:<10} {econ:<6.2f}")
         
 
 
-def match_call(matches, user_team_series,gpt_team_series):
-    user_team, gpt_team, user_players, gpt_players, user_series, gpt_series, user_bowlers, gpt_bowlers = team_up()
-    print(f"________________{user_team} VS {gpt_team}____________")
+def match_call(matches, user_team_series,gpt_team_series, user_team, gpt_team, user_players,  gpt_players, user_bowlers, gpt_bowlers, user_series, gpt_series):
+    
     batting_team, bowling_team, batting_players, bowling_players, batting_match, bowling_match, bowling_bowlers,batting_bowlers, batting_series, bowling_series = toss(
         user_team, gpt_team, user_players, gpt_players, user_bowlers, gpt_bowlers, user_series, gpt_series
     )
@@ -341,31 +354,33 @@ def match_call(matches, user_team_series,gpt_team_series):
         print(f"{batting_team} wins by {score1 - score2} runs.")
         if batting_team == user_team:
             user_team_series +=1
-            return user_team, user_team_series, gpt_team_series, user_team, gpt_team
+            return user_team, user_team_series, gpt_team_series
         else:
             gpt_team_series +=1
-            return gpt_team, user_team_series, gpt_team_series, user_team, gpt_team
+            return gpt_team, user_team_series, gpt_team_series
     elif score2 >= target:
         print(f"{bowling_team} wins by {10 - wickets2} wickets.")
         if bowling_team == user_team:
             user_team_series +=1
-            return user_team, user_team_series, gpt_team_series, user_team, gpt_team
+            return user_team, user_team_series, gpt_team_series
         else:
             gpt_team_series +=1
-            return gpt_team, user_team_series, gpt_team_series, user_team, gpt_team
+            return gpt_team, user_team_series, gpt_team_series
     else:
         print("Match Draw")
         user_team_series += 0.5
         gpt_team_series += 0.5
-        return None, user_team_series, gpt_team_series, user_team, gpt_team
+        return None, user_team_series, gpt_team_series
     
     
 def series_call():
     matches = int(input("Enter the number of matches you want in this series: "))
+    user_team, gpt_team, user_players, gpt_players, user_series, gpt_series, user_bowlers, gpt_bowlers = team_up()
+    print(f"So it's {user_team} VS {gpt_team} in a {matches}-match series!")
     user_team_series, gpt_team_series = 0,0
     for i in range(1, matches+1):
         print(f"___________Match {i}________________")
-        match_winner, user_team_series, gpt_team_series, user_team, gpt_team = match_call(matches, user_team_series, gpt_team_series)
+        match_winner, user_team_series, gpt_team_series = match_call(matches, user_team_series, gpt_team_series, user_team, gpt_team, user_players, gpt_players, user_bowlers, gpt_bowlers, user_series, gpt_series)
         alle = input("Press 'ENTER' to get series scorecard: ")
         
         ### Series team scorecard
@@ -390,13 +405,13 @@ def series_call():
     ## FUll Scorecard
     ## 1 SC
     print(f"\n{batting_team} SERIES Team Scorecard: ")
-    print(f"{'Player':<16} {'Matches':<5} {'Runs':<5} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':<8} {'Wickets':<8} {'Dot Balls':<8} {'Economy':<7} {'Performance Score':<12}")
+    print(f"{'Player':<22} {'Matches':<5} {'Runs':<5} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':<8} {'Wickets':<8} {'Dot Balls':<8} {'Economy':<7} {'Performance Score':<12}")
     for player in batting_players:
         if batting_series[player]["total_balls_faced"] >0 or batting_series[player]["total_balls_bowled"] >0:
             runs = batting_series[player]["total_runs_scored"]
             balls_faced = batting_series[player]["total_balls_faced"]
             fours = batting_series[player]["total_fours"]
-            sixers = batting_seres[player]["total_sixers"]
+            sixers = batting_series[player]["total_sixers"]
             boundaries = fours + sixers
             dot_balls = batting_series[player]["total_dot_balls_bowled"]
             wickets = batting_series[player]["total_wickets_taken"]
@@ -436,17 +451,17 @@ def series_call():
                 sr_ps = 5
             performance_score = runs + fours +(sixers*2) + (dot_balls * 2) + (wickets * 20)  -(outs *5 ) +  ec + sr_ps
             batting_series[player]["total_performance_score"] = performance_score
-            print(f"{player:<16} {matches_played:<5} {runs:<5} {fours:<5} {sixers:<6} {overs:<8.2f} {wickets:<8} {dot_balls:<8} {economy:<7} {performance_score:<12}")
+            print(f"{player:<22} {matches_played:<5} {runs:<5} {fours:<5} {sixers:<6} {overs:<8.2f} {wickets:<8} {dot_balls:<8} {economy:<7.2f} {performance_score:<12}")
     alle = input("Press 'ENTER' to get other team SERIES SCORECARD: ")
     # 2 SC
     print(f"\n{bowing_team} SERIES Team Scorecard: ")
-    print(f"{'Player':<16} {'Matches':<5} {'Runs':<5} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':<8} {'Wickets':<8} {'Dot Balls':<8} {'Economy':<7} {'Performance Score':<12}")
+    print(f"{'Player':<22} {'Matches':<5} {'Runs':<5} {'Fours':<5} {'Sixers':<6} {'Overs Bowled':<8} {'Wickets':<8} {'Dot Balls':<8} {'Economy':<7} {'Performance Score':<12}")
     for player in bowling_players:
         if bowling_series[player]["total_balls_faced"] >0 or bowling_series[player]["total_balls_bowled"] >0:
             runs = bowling_series[player]["total_runs_scored"]
             balls_faced = bowling_series[player]["total_balls_faced"]
             fours = bowling_series[player]["total_fours"]
-            sixers = bowling_seres[player]["total_sixers"]
+            sixers = bowling_series[player]["total_sixers"]
             boundaries = fours + sixers
             dot_balls = bowling_series[player]["total_dot_balls_bowled"]
             wickets = bowling_series[player]["total_wickets_taken"]
@@ -486,7 +501,7 @@ def series_call():
                 sr_pr = 5
             performance_score = runs + fours*1 +(sixers*2) + (dot_balls * 2) + (wickets * 20)  -(outs *5 ) +  ec + sr_ps
             bowling_series[player]["total_performance_score"] = performance_score
-            print(f"{player:<16} {matches:<5} {runs:<5} {fours:<5} {sixers:<6} {overs:<8.2f} {wickets:<8} {dot_balls:<8} {economy:<7} {performance_score:<12}")
+            print(f"{player:<22} {matches_played:<5} {runs:<5} {fours:<5} {sixers:<6} {overs:<8.2f} {wickets:<8} {dot_balls:<8} {economy:<7.2f} {performance_score:<12}")
 
 
     print("Series Summary Here!!!")
@@ -509,6 +524,12 @@ winner_of_the_series = series_call()
 time.sleep(3)
 print(f"{winner_of_the_series} won the series!!! CONGRATULATIONS TO {winner_of_the_series}")
 
-# COMPLETE SERIES PLAYERS SCORECARDS IS NOT ADDING UP
-## LIMIT CRECARD ECONOMY VALUE TO 2-3 DIGITS
-## set player of the series not working typeerror here
+print("Thank you for playing NRI Cricket Simulator")
+
+play_again = input("Do you want to play again? (yes/no): ").lower()
+if play_again == "yes":
+    winner_of_the_series = series_call()
+    time.sleep(3)
+    print(f"{winner_of_the_series} won the series!!! CONGRATULATIONS TO {winner_of_the_series}")
+else:
+    print("Have a Good Day!")
